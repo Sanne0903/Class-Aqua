@@ -12,13 +12,40 @@
       margin: 0;
       padding: 0;
     }
+
+    .overlay-caption {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.65);
+      color: #fff;
+      padding: 1em;
+      font-size: 2vw;
+      line-height: 1.4;
+      border-radius: 8px;
+      max-width: 90%;
+      z-index: 1000;
+    }
+
+    .legend {
+      position: absolute;
+      bottom: 30px;
+      left: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 15px;
+      font-size: 14px;
+      line-height: 1.5;
+      border-radius: 6px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
   <!-- Overlay caption -->
-  <div style="position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.65); color: #fff; padding: 20px; font-size: 30px; line-height: 1.4; border-radius: 8px; max-width: 90%; z-index: 1000;">
+  <div class="overlay-caption">
     <strong>Detection and classification of marine aquaculture installations</strong><br>
     Extracted from Sentinel-1 SAR imagery using iDPolRAD and a Random Forest model<br>
     Mediterranean Sea, July–September 2024<br>
@@ -26,7 +53,7 @@
   </div>
 
   <!-- Legend -->
-  <div style="position: absolute; bottom: 30px; left: 20px; background: rgba(255, 255, 255, 0.9); padding: 10px 15px; font-size: 14px; line-height: 1.5; border-radius: 6px; box-shadow: 0 0 5px rgba(0,0,0,0.3); z-index: 1000;">
+  <div class="legend">
     <strong>Legend</strong><br>
     <span style="display:inline-block; width: 12px; height: 12px; background:red; margin-right: 6px;"></span> Finfish (round cage) farms (Class 0)<br>
     <span style="display:inline-block; width: 12px; height: 12px; background:yellow; margin-right: 6px;"></span> Shellfish (longline) farms (Class 1)<br>
@@ -38,46 +65,61 @@
     const map = L.map('map').setView([35.5, 18], 5);
 
     // Satellite basemap
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, GIS User Community'
     }).addTo(map);
 
-    // Load Random Forest classification results
+    // Layer placeholders
+    let rfLayer, baseLayer;
+
+    // Load Random Forest classification layer
     fetch('ClassificationRF.geojson')
       .then(response => response.json())
       .then(data => {
-        const rfLayer = L.geoJSON(data, {
-          style: function (feature) {
-            const classValue = feature.properties.gridcode; 
+        rfLayer = L.geoJSON(data, {
+          style: feature => {
+            const classValue = feature.properties.gridcode;
             return {
               color: classValue === 0 ? 'red' : 'yellow',
               fillOpacity: 0.5,
               weight: 1
             };
           }
-        }).addTo(map);
-
+        });
+        rfLayer.addTo(map);
         map.fitBounds(rfLayer.getBounds());
+
+        addLayerControl(); // Add control after layers are ready
       })
-      .catch(error => {
-        console.error('Error loading ClassificationRF.geojson:', error);
-      });
+      .catch(error => console.error('Error loading ClassificationRF.geojson:', error));
 
     // Load base detection layer
     fetch('Aquaculture.geojson')
       .then(response => response.json())
       .then(data => {
-        L.geoJSON(data, {
+        baseLayer = L.geoJSON(data, {
           style: {
             color: 'white',
             weight: 1,
             fillOpacity: 0.4
           }
-        }).addTo(map);
+        });
+        baseLayer.addTo(map);
+
+        addLayerControl(); // Add control after layers are ready
       })
-      .catch(error => {
-        console.error('Error loading Aquaculture.geojson:', error);
-      });
+      .catch(error => console.error('Error loading Aquaculture.geojson:', error));
+
+    // Layer control setup
+    function addLayerControl() {
+      if (rfLayer && baseLayer) {
+        const overlayMaps = {
+          "Classification (RF)": rfLayer,
+          "Base Detection": baseLayer
+        };
+        L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
+      }
+    }
   </script>
 </body>
 </html>
