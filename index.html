@@ -107,7 +107,6 @@
       })
       .catch(error => console.error('Error loading Aquaculture.geojson:', error));
 
-    // Add layer control once both layers are loaded
     function addLayerControl() {
       if (rfLayer && baseLayer && !map.layerControlAdded) {
         const overlayMaps = {
@@ -119,19 +118,19 @@
       }
     }
 
-    // Dynamic caption font size based on zoom
+    // Inverse font scaling: larger text when zoomed out, smaller when zoomed in
     function updateCaptionFontSize() {
       const zoom = map.getZoom();
       const caption = document.getElementById('caption');
 
-      // Font size scaling: tweak min/max values as needed
       const minZoom = 3;
       const maxZoom = 12;
-      const minFont = 12;
-      const maxFont = 28;
+      const minFont = 12; // smallest at max zoom
+      const maxFont = 28; // largest at min zoom
 
       const clampedZoom = Math.max(minZoom, Math.min(maxZoom, zoom));
-      const fontSize = minFont + (maxFont - minFont) * ((clampedZoom - minZoom) / (maxZoom - minZoom));
+      const fontSize = maxFont - (maxFont - minFont) * ((clampedZoom - minZoom) / (maxZoom - minZoom));
+
       caption.style.fontSize = `${fontSize}px`;
     }
 
