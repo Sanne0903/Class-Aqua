@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html>
 <head>
   <title>Aquaculture Map - Detection & Classification</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     html, body, #map {
@@ -21,11 +20,11 @@
       background: rgba(0,0,0,0.65);
       color: #fff;
       padding: 1em;
-      font-size: 2vw;
       line-height: 1.4;
       border-radius: 8px;
       max-width: 90%;
       z-index: 1000;
+      transition: font-size 0.3s ease;
     }
 
     .legend {
@@ -46,7 +45,7 @@
   <div id="map"></div>
 
   <!-- Overlay caption -->
-  <div class="overlay-caption">
+  <div class="overlay-caption" id="caption">
     <strong>Detection and classification of marine aquaculture installations</strong><br>
     Extracted from Sentinel-1 SAR imagery using iDPolRAD and a Random Forest model<br>
     Mediterranean Sea, July–September 2024<br>
@@ -70,10 +69,9 @@
       attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, GIS User Community'
     }).addTo(map);
 
-    // Layer placeholders
     let rfLayer, baseLayer;
 
-    // Load Random Forest classification layer
+    // Load classification layer
     fetch('ClassificationRF.geojson')
       .then(response => response.json())
       .then(data => {
@@ -89,8 +87,7 @@
         });
         rfLayer.addTo(map);
         map.fitBounds(rfLayer.getBounds());
-
-        addLayerControl(); // Add control after layers are ready
+        addLayerControl();
       })
       .catch(error => console.error('Error loading ClassificationRF.geojson:', error));
 
@@ -106,21 +103,40 @@
           }
         });
         baseLayer.addTo(map);
-
-        addLayerControl(); // Add control after layers are ready
+        addLayerControl();
       })
       .catch(error => console.error('Error loading Aquaculture.geojson:', error));
 
-    // Layer control setup
+    // Add layer control once both layers are loaded
     function addLayerControl() {
-      if (rfLayer && baseLayer) {
+      if (rfLayer && baseLayer && !map.layerControlAdded) {
         const overlayMaps = {
           "Classification (RF)": rfLayer,
           "Base Detection": baseLayer
         };
         L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
+        map.layerControlAdded = true;
       }
     }
+
+    // Dynamic caption font size based on zoom
+    function updateCaptionFontSize() {
+      const zoom = map.getZoom();
+      const caption = document.getElementById('caption');
+
+      // Font size scaling: tweak min/max values as needed
+      const minZoom = 3;
+      const maxZoom = 12;
+      const minFont = 12;
+      const maxFont = 28;
+
+      const clampedZoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+      const fontSize = minFont + (maxFont - minFont) * ((clampedZoom - minZoom) / (maxZoom - minZoom));
+      caption.style.fontSize = `${fontSize}px`;
+    }
+
+    map.on('zoomend', updateCaptionFontSize);
+    map.whenReady(updateCaptionFontSize);
   </script>
 </body>
 </html>
