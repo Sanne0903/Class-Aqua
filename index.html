@@ -48,7 +48,7 @@
       .then(data => {
         const rfLayer = L.geoJSON(data, {
           style: function (feature) {
-            const classValue = feature.properties.Class; // <-- Check property name!
+            const classValue = feature.properties.gridcode; 
             return {
               color: classValue === 0 ? 'red' : 'yellow',
               fillOpacity: 0.5,
