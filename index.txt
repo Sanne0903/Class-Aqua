@@ -33,7 +33,26 @@
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, GIS User Community'
     }).addTo(map);
+  // Load Random Forest classification results
+    fetch('ClassificationRF.geojson')
+      .then(response => response.json())
+      .then(data => {
+        const rfLayer = L.geoJSON(data, {
+          style: function (feature) {
+            const classValue = feature.properties.class;
+            return {
+              color: classValue === 0 ? 'red' : 'yellow',
+              fillOpacity: 0.5,
+              weight: 1
+            };
+          }
+        }).addTo(map);
 
+        map.fitBounds(rfLayer.getBounds());
+      })
+      .catch(error => {
+        console.error('Error loading ClassificationRF.geojson:', error);
+      });
     // Load Random Forest classification results
     fetch('ClassificationRF.geojson')
       .then(response => response.json())
